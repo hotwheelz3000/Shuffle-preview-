@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shuffle Preview — Spotify Random Player</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+–green: #1DB954;
+–green-h: #1ed760;
+–bg: #0a0a0a;
+–card: #141414;
+–card2: #1c1c1c;
+–border: rgba(255,255,255,0.07);
+–text: #ffffff;
+–muted: #666;
+–orange: #ffb347;
+–red-soft: rgba(255,100,100,0.85);
+–font-head: ‘Syne’, sans-serif;
+–font-body: ‘DM Sans’, sans-serif;
+}
+
+html, body {
+min-height: 100vh;
+background: var(–bg);
+color: var(–text);
+font-family: var(–font-body);
+}
+
+/* ── Noise grain overlay ── */
+body::before {
+content: ‘’;
+position: fixed;
+inset: 0;
+background-image: url(“data:image/svg+xml,%3Csvg viewBox=‘0 0 200 200’ xmlns=‘http://www.w3.org/2000/svg’%3E%3Cfilter id=‘n’%3E%3CfeTurbulence type=‘fractalNoise’ baseFrequency=‘0.9’ numOctaves=‘4’ stitchTiles=‘stitch’/%3E%3C/filter%3E%3Crect width=‘100%25’ height=‘100%25’ filter=‘url(%23n)’ opacity=‘0.04’/%3E%3C/svg%3E”);
+background-size: 200px;
+pointer-events: none;
+z-index: 0;
+opacity: 0.4;
+}
+
+/* ── Layout ── */
+.page {
+position: relative;
+z-index: 1;
+min-height: 100vh;
+display: flex;
+flex-direction: column;
+align-items: center;
+justify-content: center;
+padding: 2rem 1rem;
+}
+
+/* ══════════════════════════════
+LOGIN SCREEN
+══════════════════════════════ */
+#loginScreen {
+text-align: center;
+max-width: 380px;
+width: 100%;
+animation: fadeUp 0.5s ease both;
+}
+
+.brand-mark {
+width: 64px; height: 64px;
+background: var(–green);
+border-radius: 50%;
+display: flex; align-items: center; justify-content: center;
+margin: 0 auto 2rem;
+box-shadow: 0 0 40px rgba(29,185,84,0.25);
+}
+.brand-mark svg { width: 36px; height: 36px; fill: #000; }
+
+.login-title {
+font-family: var(–font-head);
+font-size: 2.4rem;
+font-weight: 800;
+letter-spacing: -0.03em;
+line-height: 1.1;
+margin-bottom: 0.75rem;
+}
+.login-title span { color: var(–green); }
+
+.login-sub {
+font-size: 0.9rem;
+color: var(–muted);
+line-height: 1.6;
+margin-bottom: 2.5rem;
+}
+
+.login-btn {
+display: inline-flex;
+align-items: center;
+gap: 10px;
+background: var(–green);
+color: #000;
+font-family: var(–font-body);
+font-weight: 700;
+font-size: 0.95rem;
+padding: 14px 28px;
+border-radius: 50px;
+border: none;
+cursor: pointer;
+transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+text-decoration: none;
+}
+.login-btn:hover {
+background: var(–green-h);
+transform: translateY(-1px);
+box-shadow: 0 8px 24px rgba(29,185,84,0.3);
+}
+.login-btn:active { transform: scale(0.97); }
+.login-btn svg { width: 20px; height: 20px; fill: #000; }
+
+.login-note {
+margin-top: 1.5rem;
+font-size: 0.72rem;
+color: #333;
+line-height: 1.6;
+}
+
+/* ══════════════════════════════
+APP SCREEN
+══════════════════════════════ */
+#appScreen {
+display: none;
+width: 100%;
+max-width: 420px;
+animation: fadeUp 0.4s ease both;
+}
+
+/* Top bar */
+.topbar {
+display: flex;
+align-items: center;
+justify-content: space-between;
+margin-bottom: 1.5rem;
+}
+
+.topbar-brand {
+display: flex;
+align-items: center;
+gap: 10px;
+}
+
+.mini-logo {
+width: 32px; height: 32px;
+background: var(–green);
+border-radius: 50%;
+display: flex; align-items: center; justify-content: center;
+flex-shrink: 0;
+}
+.mini-logo svg { width: 18px; height: 18px; fill: #000; }
+
+.topbar-title {
+font-family: var(–font-head);
+font-size: 1rem;
+font-weight: 700;
+letter-spacing: -0.01em;
+}
+
+.user-pill {
+display: flex;
+align-items: center;
+gap: 8px;
+background: var(–card);
+border: 1px solid var(–border);
+border-radius: 50px;
+padding: 5px 12px 5px 5px;
+font-size: 0.78rem;
+color: var(–muted);
+}
+.user-avatar {
+width: 24px; height: 24px;
+border-radius: 50%;
+background: var(–card2);
+object-fit: cover;
+flex-shrink: 0;
+}
+.user-avatar-placeholder {
+width: 24px; height: 24px;
+border-radius: 50%;
+background: var(–green);
+display: flex; align-items: center; justify-content: center;
+font-size: 0.65rem;
+font-weight: 700;
+color: #000;
+flex-shrink: 0;
+}
+
+.logout-btn {
+background: none;
+border: none;
+color: #333;
+font-size: 0.72rem;
+cursor: pointer;
+font-family: var(–font-body);
+padding: 0;
+margin-left: 4px;
+transition: color 0.15s;
+}
+.logout-btn:hover { color: var(–muted); }
+
+/* Input */
+.input-row {
+display: flex;
+gap: 8px;
+margin-bottom: 0.75rem;
+}
+
+.playlist-input {
+flex: 1;
+min-width: 0;
+background: var(–card);
+border: 1px solid var(–border);
+border-radius: 12px;
+color: var(–text);
+font-size: 0.875rem;
+padding: 12px 14px;
+outline: none;
+font-family: var(–font-body);
+transition: border-color 0.2s;
+}
+.playlist-input:focus { border-color: rgba(29,185,84,0.4); }
+.playlist-input::placeholder { color: #333; }
+
+.shuffle-btn {
+background: var(–green);
+border: none;
+border-radius: 12px;
+color: #000;
+font-weight: 700;
+font-size: 0.875rem;
+padding: 0 20px;
+cursor: pointer;
+white-space: nowrap;
+font-family: var(–font-body);
+transition: background 0.15s, transform 0.1s;
+flex-shrink: 0;
+}
+.shuffle-btn:hover { background: var(–green-h); }
+.shuffle-btn:active { transform: scale(0.97); }
+.shuffle-btn:disabled { background: var(–card2); color: #333; cursor: not-allowed; transform: none; }
+
+/* Error */
+.error-box {
+display: none;
+background: rgba(255,100,100,0.07);
+border: 1px solid rgba(255,100,100,0.18);
+border-radius: 10px;
+padding: 0.8rem 1rem;
+font-size: 0.8rem;
+color: var(–red-soft);
+line-height: 1.5;
+margin-bottom: 0.75rem;
+}
+.error-box.show { display: block; }
+
+/* Status */
+.status {
+display: none;
+align-items: center;
+gap: 10px;
+padding: 1rem;
+justify-content: center;
+}
+.status.show { display: flex; }
+.spinner {
+width: 20px; height: 20px;
+border: 2px solid rgba(29,185,84,0.15);
+border-top-color: var(–green);
+border-radius: 50%;
+animation: spin 0.65s linear infinite;
+flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.status span { font-size: 0.82rem; color: var(–muted); }
+
+/* Player card */
+.player-card {
+display: none;
+background: var(–card);
+border: 1px solid var(–border);
+border-radius: 20px;
+overflow: hidden;
+animation: fadeUp 0.3s ease both;
+}
+.player-card.show { display: block; }
+
+@keyframes fadeUp {
+from { opacity: 0; transform: translateY(12px); }
+to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Art */
+.art-wrap {
+position: relative;
+width: 100%;
+padding-bottom: 100%;
+background: var(–card2);
+overflow: hidden;
+}
+.art-ph {
+position: absolute; inset: 0;
+display: flex; align-items: center; justify-content: center;
+}
+.art-ph svg { width: 56px; height: 56px; fill: #222; }
+.art-wrap img {
+position: absolute; inset: 0;
+width: 100%; height: 100%;
+object-fit: cover;
+opacity: 0;
+transition: opacity 0.45s;
+}
+.art-wrap img.loaded { opacity: 1; }
+
+/* No preview */
+.no-preview {
+display: none;
+align-items: center;
+gap: 8px;
+padding: 9px 16px;
+background: rgba(255,179,71,0.08);
+border-bottom: 1px solid rgba(255,179,71,0.12);
+font-size: 0.76rem;
+color: var(–orange);
+}
+.no-preview.show { display: flex; }
+.no-preview svg { width: 13px; height: 13px; fill: var(–orange); flex-shrink: 0; }
+
+/* Track info */
+.track-info { padding: 1.2rem 1.4rem 0; }
+.track-name {
+font-family: var(–font-head);
+font-size: 1.15rem;
+font-weight: 700;
+letter-spacing: -0.02em;
+white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.track-artist {
+font-size: 0.82rem;
+color: var(–muted);
+margin-top: 3px;
+white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Progress */
+.progress-area { padding: 1.1rem 1.4rem 0; }
+.progress-bar {
+height: 4px;
+background: rgba(255,255,255,0.08);
+border-radius: 2px;
+cursor: pointer;
+position: relative;
+margin-bottom: 6px;
+}
+.progress-bar:hover .thumb { transform: translate(-50%, -50%) scale(1); }
+.progress-fill {
+position: absolute; left: 0; top: 0; bottom: 0;
+background: var(–green);
+border-radius: 2px;
+width: 0%;
+pointer-events: none;
+}
+.thumb {
+position: absolute;
+top: 50%; left: 0%;
+transform: translate(-50%, -50%) scale(0);
+width: 12px; height: 12px;
+background: #fff;
+border-radius: 50%;
+transition: transform 0.15s;
+pointer-events: none;
+}
+.time-row {
+display: flex;
+justify-content: space-between;
+font-size: 0.69rem;
+color: var(–muted);
+font-variant-numeric: tabular-nums;
+font-family: monospace;
+}
+
+/* Controls */
+.controls {
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 1rem 1.4rem 1.3rem;
+}
+.ctrl-btn {
+background: none; border: none;
+color: var(–muted);
+cursor: pointer; padding: 6px;
+border-radius: 8px;
+transition: color 0.15s;
+display: flex; align-items: center; justify-content: center;
+}
+.ctrl-btn:hover { color: var(–text); }
+.ctrl-btn svg { width: 22px; height: 22px; }
+
+.play-btn {
+width: 58px; height: 58px;
+background: var(–green);
+border: none; border-radius: 50%;
+cursor: pointer;
+display: flex; align-items: center; justify-content: center;
+transition: background 0.15s, transform 0.1s;
+}
+.play-btn:hover { background: var(–green-h); transform: scale(1.04); }
+.play-btn:active { transform: scale(0.96); }
+.play-btn:disabled { background: var(–card2); cursor: not-allowed; transform: none; }
+.play-btn svg { width: 26px; height: 26px; fill: #000; }
+
+.open-btn {
+display: flex; align-items: center; justify-content: center;
+gap: 8px;
+margin: 0 1.4rem 1.4rem;
+padding: 11px;
+background: transparent;
+border: 1px solid rgba(29,185,84,0.35);
+border-radius: 12px;
+color: var(–green);
+font-size: 0.84rem;
+font-weight: 600;
+cursor: pointer;
+font-family: var(–font-body);
+transition: background 0.15s, border-color 0.15s;
+text-decoration: none;
+}
+.open-btn:hover { background: rgba(29,185,84,0.07); border-color: var(–green); }
+.open-btn svg { width: 15px; height: 15px; fill: var(–green); }
+
+/* Empty hint */
+.empty-hint {
+text-align: center;
+padding: 2.5rem 1rem;
+color: #252525;
+font-size: 0.82rem;
+line-height: 1.8;
+}
+.empty-hint svg { width: 44px; height: 44px; fill: #1e1e1e; display: block; margin: 0 auto 1rem; }
+</style>
+
+</head>
+<body>
+<div class="page">
+
+  <!-- ── LOGIN SCREEN ── -->
+
+  <div id="loginScreen">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 01-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.623.623 0 01-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.623.623 0 01.207.857zm1.223-2.722a.78.78 0 01-1.072.257c-2.687-1.652-6.785-2.13-9.965-1.166a.78.78 0 01-.973-.519.781.781 0 01.52-.973c3.632-1.102 8.147-.568 11.233 1.329a.78.78 0 01.257 1.072zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.937.937 0 11-.543-1.794c3.53-1.07 9.404-.863 13.115 1.333a.936.936 0 11-.955 1.618z"/></svg>
+    </div>
+
+```
+<h1 class="login-title">Shuffle<br><span>Preview</span></h1>
+<p class="login-sub">Paste any public Spotify playlist and hear a random 30‑second preview. Login with your Spotify account to get started.</p>
+
+<button class="login-btn" onclick="startLogin()">
+  <svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 01-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.623.623 0 01-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.623.623 0 01.207.857zm1.223-2.722a.78.78 0 01-1.072.257c-2.687-1.652-6.785-2.13-9.965-1.166a.78.78 0 01-.973-.519.781.781 0 01.52-.973c3.632-1.102 8.147-.568 11.233 1.329a.78.78 0 01.257 1.072zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.937.937 0 11-.543-1.794c3.53-1.07 9.404-.863 13.115 1.333a.936.936 0 11-.955 1.618z"/></svg>
+  Continue with Spotify
+</button>
+
+<p class="login-note">Only requests read access to your public profile.<br>No data is stored anywhere.</p>
+```
+
+  </div>
+
+  <!-- ── APP SCREEN ── -->
+
+  <div id="appScreen">
+
+```
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="mini-logo">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 01-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.623.623 0 01-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.623.623 0 01.207.857zm1.223-2.722a.78.78 0 01-1.072.257c-2.687-1.652-6.785-2.13-9.965-1.166a.78.78 0 01-.973-.519.781.781 0 01.52-.973c3.632-1.102 8.147-.568 11.233 1.329a.78.78 0 01.257 1.072zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.937.937 0 11-.543-1.794c3.53-1.07 9.404-.863 13.115 1.333a.936.936 0 11-.955 1.618z"/></svg>
+    </div>
+    <span class="topbar-title">Shuffle Preview</span>
+  </div>
+  <div class="user-pill">
+    <div class="user-avatar-placeholder" id="userInitial">?</div>
+    <img class="user-avatar" id="userAvatar" src="" alt="" style="display:none">
+    <span id="userName">Loading…</span>
+    <button class="logout-btn" onclick="logout()">· logout</button>
+  </div>
+</div>
+
+<div class="input-row">
+  <input class="playlist-input" id="playlistInput"
+    placeholder="Paste a Spotify playlist link…"
+    spellcheck="false" autocomplete="off">
+  <button class="shuffle-btn" id="shuffleBtn" onclick="loadTrack()">Shuffle</button>
+</div>
+
+<div class="error-box" id="errorBox"></div>
+
+<div class="status" id="status">
+  <div class="spinner"></div>
+  <span>Fetching a random track…</span>
+</div>
+
+<div class="player-card" id="playerCard">
+  <div class="art-wrap">
+    <div class="art-ph" id="artPh">
+      <svg viewBox="0 0 24 24"><path d="M12 3v10.55A4 4 0 1014 17V7h4V3h-6z"/></svg>
+    </div>
+    <img id="albumArt" alt="Album art">
+  </div>
+
+  <div class="no-preview" id="noPreview">
+    <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+    No 30‑second preview available for this track
+  </div>
+
+  <div class="track-info">
+    <div class="track-name" id="trackName"></div>
+    <div class="track-artist" id="trackArtist"></div>
+  </div>
+
+  <div class="progress-area">
+    <div class="progress-bar" id="progressBar">
+      <div class="progress-fill" id="progressFill"></div>
+      <div class="thumb" id="thumb"></div>
+    </div>
+    <div class="time-row">
+      <span id="elapsed">0:00</span>
+      <span id="duration">0:30</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn" onclick="loadTrack()" title="Another random track">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/></svg>
+    </button>
+    <button class="play-btn" id="playBtn" onclick="togglePlay()" disabled>
+      <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </button>
+    <button class="ctrl-btn" onclick="openSpotify()" title="Open in Spotify">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 19H5V5h7V3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
+    </button>
+  </div>
+
+  <button class="open-btn" onclick="openSpotify()">
+    <svg viewBox="0 0 24 24"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424a.622.622 0 01-.857.207c-2.348-1.435-5.304-1.76-8.785-.964a.623.623 0 01-.277-1.215c3.809-.87 7.076-.496 9.712 1.115a.623.623 0 01.207.857zm1.223-2.722a.78.78 0 01-1.072.257c-2.687-1.652-6.785-2.13-9.965-1.166a.78.78 0 01-.973-.519.781.781 0 01.52-.973c3.632-1.102 8.147-.568 11.233 1.329a.78.78 0 01.257 1.072zm.105-2.835C14.692 8.95 9.375 8.775 6.297 9.71a.937.937 0 11-.543-1.794c3.53-1.07 9.404-.863 13.115 1.333a.936.936 0 11-.955 1.618z"/></svg>
+    Open in Spotify
+  </button>
+</div>
+
+<div class="empty-hint" id="emptyHint">
+  <svg viewBox="0 0 24 24"><path d="M12 3v10.55A4 4 0 1014 17V7h4V3h-6z"/></svg>
+  Paste any public playlist link above and hit Shuffle
+</div>
+```
+
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────
+// CONFIG — paste your Client ID here
+// ─────────────────────────────────────────
+const CLIENT_ID = 'YOUR_CLIENT_ID_HERE';
+const REDIRECT_URI = window.location.origin + window.location.pathname.replace(/\/$/, '');
+const SCOPES = 'user-read-private';
+
+// ─────────────────────────────────────────
+// PKCE helpers
+// ─────────────────────────────────────────
+function rand(len) {
+  const arr = new Uint8Array(len);
+  crypto.getRandomValues(arr);
+  return Array.from(arr, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function sha256(plain) {
+  const enc = new TextEncoder().encode(plain);
+  return crypto.subtle.digest('SHA-256', enc);
+}
+
+function base64url(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function pkce() {
+  const verifier = rand(32);
+  const challenge = base64url(await sha256(verifier));
+  return { verifier, challenge };
+}
+
+// ─────────────────────────────────────────
+// Auth flow
+// ─────────────────────────────────────────
+async function startLogin() {
+  const { verifier, challenge } = await pkce();
+  sessionStorage.setItem('pkce_verifier', verifier);
+
+  const params = new URLSearchParams({
+    client_id: CLIENT_ID,
+    response_type: 'code',
+    redirect_uri: REDIRECT_URI,
+    scope: SCOPES,
+    code_challenge_method: 'S256',
+    code_challenge: challenge,
+    show_dialog: 'false'
+  });
+
+  window.location = 'https://accounts.spotify.com/authorize?' + params;
+}
+
+async function exchangeCode(code) {
+  const verifier = sessionStorage.getItem('pkce_verifier');
+  if (!verifier) throw new Error('No PKCE verifier found. Please log in again.');
+
+  const res = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: REDIRECT_URI,
+      client_id: CLIENT_ID,
+      code_verifier: verifier
+    })
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error_description || 'Failed to exchange auth code.');
+  }
+
+  const data = await res.json();
+  saveTokens(data);
+  sessionStorage.removeItem('pkce_verifier');
+  // Clean URL
+  window.history.replaceState({}, '', window.location.pathname);
+}
+
+async function refreshAccessToken() {
+  const rt = localStorage.getItem('sp_refresh');
+  if (!rt) throw new Error('No refresh token.');
+
+  const res = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: rt,
+      client_id: CLIENT_ID
+    })
+  });
+
+  if (!res.ok) throw new Error('Token refresh failed.');
+  const data = await res.json();
+  saveTokens(data);
+}
+
+function saveTokens(data) {
+  localStorage.setItem('sp_access', data.access_token);
+  localStorage.setItem('sp_expiry', Date.now() + (data.expires_in - 60) * 1000);
+  if (data.refresh_token) localStorage.setItem('sp_refresh', data.refresh_token);
+}
+
+async function getToken() {
+  const expiry = parseInt(localStorage.getItem('sp_expiry') || '0');
+  if (Date.now() < expiry) return localStorage.getItem('sp_access');
+  await refreshAccessToken();
+  return localStorage.getItem('sp_access');
+}
+
+function isLoggedIn() {
+  return !!localStorage.getItem('sp_access');
+}
+
+function logout() {
+  localStorage.removeItem('sp_access');
+  localStorage.removeItem('sp_refresh');
+  localStorage.removeItem('sp_expiry');
+  stopAudio();
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'block';
+}
+
+// ─────────────────────────────────────────
+// User profile
+// ─────────────────────────────────────────
+async function loadProfile() {
+  const tok = await getToken();
+  const res = await fetch('https://api.spotify.com/v1/me', {
+    headers: { Authorization: 'Bearer ' + tok }
+  });
+  if (!res.ok) return;
+  const data = await res.json();
+  document.getElementById('userName').textContent = data.display_name || data.id;
+  if (data.images?.length) {
+    const img = document.getElementById('userAvatar');
+    img.src = data.images[0].url;
+    img.style.display = 'block';
+    document.getElementById('userInitial').style.display = 'none';
+  } else {
+    const name = data.display_name || data.id || '?';
+    document.getElementById('userInitial').textContent = name[0].toUpperCase();
+  }
+}
+
+// ─────────────────────────────────────────
+// Playlist + track
+// ─────────────────────────────────────────
+function extractId(link) {
+  const url = link.match(/playlist\/([a-zA-Z0-9]+)/);
+  if (url) return url[1];
+  const uri = link.match(/spotify:playlist:([a-zA-Z0-9]+)/);
+  if (uri) return uri[1];
+  return null;
+}
+
+let currentTrack = null;
+
+async function loadTrack() {
+  const link = document.getElementById('playlistInput').value.trim();
+  const pid = extractId(link);
+  if (!pid) {
+    showError('Paste a valid Spotify playlist link — e.g. https://open.spotify.com/playlist/...');
+    return;
+  }
+
+  stopAudio();
+  setLoading(true);
+  hideError();
+  hidePlayer();
+  document.getElementById('emptyHint').style.display = 'none';
+
+  try {
+    const tok = await getToken();
+
+    const countRes = await fetch(
+      `https://api.spotify.com/v1/playlists/${pid}/tracks?limit=1&fields=total`,
+      { headers: { Authorization: 'Bearer ' + tok } }
+    );
+    if (countRes.status === 401) { logout(); return; }
+    if (countRes.status === 403) throw new Error('This playlist is private or unavailable.');
+    if (countRes.status === 404) throw new Error('Playlist not found. Make sure it\'s public.');
+    if (!countRes.ok) throw new Error('Spotify API error ' + countRes.status);
+
+    const { total } = await countRes.json();
+    if (!total) throw new Error('This playlist is empty.');
+
+    const offset = Math.floor(Math.random() * total);
+    const trackRes = await fetch(
+      `https://api.spotify.com/v1/playlists/${pid}/tracks?limit=1&offset=${offset}&fields=items(track(id,name,preview_url,uri,artists,album(images)))`,
+      { headers: { Authorization: 'Bearer ' + tok } }
+    );
+    if (!trackRes.ok) throw new Error('Failed to fetch track.');
+
+    const raw = (await trackRes.json()).items?.[0]?.track;
+    if (!raw) throw new Error('Track data was empty — try again.');
+
+    currentTrack = {
+      id: raw.id,
+      name: raw.name,
+      artist: (raw.artists || []).map(a => a.name).join(', ') || 'Unknown Artist',
+      art: raw.album?.images?.[0]?.url || null,
+      preview: raw.preview_url || null,
+      uri: raw.uri
+    };
+
+    renderTrack(currentTrack);
+    if (currentTrack.preview) setupAudio(currentTrack.preview);
+
+  } catch (e) {
+    showError(e.message || 'Something went wrong. Try again.');
+    document.getElementById('emptyHint').style.display = 'block';
+  } finally {
+    setLoading(false);
+  }
+}
+
+// ─────────────────────────────────────────
+// Render
+// ─────────────────────────────────────────
+function renderTrack(t) {
+  document.getElementById('trackName').textContent = t.name;
+  document.getElementById('trackArtist').textContent = t.artist;
+
+  const img = document.getElementById('albumArt');
+  const ph  = document.getElementById('artPh');
+  img.classList.remove('loaded');
+  if (t.art) {
+    img.onload  = () => { img.classList.add('loaded'); ph.style.display = 'none'; };
+    img.onerror = () => { ph.style.display = 'flex'; };
+    img.src = t.art;
+  } else {
+    img.src = ''; ph.style.display = 'flex';
+  }
+
+  document.getElementById('noPreview').classList.toggle('show', !t.preview);
+  document.getElementById('playBtn').disabled = !t.preview;
+  resetProgress();
+  showPlayer();
+  setPlayIcon(false);
+}
+
+// ─────────────────────────────────────────
+// Audio
+// ─────────────────────────────────────────
+let audio = null;
+let isPlaying = false;
+
+function setupAudio(url) {
+  audio = new Audio(url);
+  audio.addEventListener('loadedmetadata', () => {
+    const d = isFinite(audio.duration) ? audio.duration : 30;
+    document.getElementById('duration').textContent = fmt(d);
+  });
+  audio.addEventListener('timeupdate', updateProgress);
+  audio.addEventListener('ended', () => {
+    isPlaying = false; setPlayIcon(false);
+    document.getElementById('progressFill').style.width = '100%';
+    document.getElementById('thumb').style.left = '100%';
+  });
+  document.getElementById('progressBar').addEventListener('click', e => {
+    if (!audio || !isFinite(audio.duration)) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    audio.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * audio.duration;
+  });
+}
+
+function togglePlay() {
+  if (!audio) return;
+  if (isPlaying) { audio.pause(); isPlaying = false; setPlayIcon(false); }
+  else           { audio.play();  isPlaying = true;  setPlayIcon(true);  }
+}
+
+function updateProgress() {
+  if (!audio || !isFinite(audio.duration)) return;
+  const pct = (audio.currentTime / audio.duration) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('thumb').style.left = pct + '%';
+  document.getElementById('elapsed').textContent = fmt(audio.currentTime);
+}
+
+function stopAudio() {
+  if (audio) { audio.pause(); audio.src = ''; audio = null; }
+  isPlaying = false;
+}
+
+function setPlayIcon(p) {
+  document.getElementById('playIcon').innerHTML = p
+    ? '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'
+    : '<path d="M8 5v14l11-7z"/>';
+}
+
+function resetProgress() {
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('thumb').style.left = '0%';
+  document.getElementById('elapsed').textContent = '0:00';
+  document.getElementById('duration').textContent = '0:30';
+}
+
+function openSpotify() {
+  if (!currentTrack) return;
+  window.open(`https://open.spotify.com/track/${currentTrack.id}`, '_blank');
+}
+
+// ─────────────────────────────────────────
+// UI helpers
+// ─────────────────────────────────────────
+function fmt(s) {
+  s = Math.floor(isNaN(s) ? 0 : s);
+  return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+}
+function setLoading(on) {
+  document.getElementById('status').classList.toggle('show', on);
+  document.getElementById('shuffleBtn').disabled = on;
+}
+function showPlayer()  { document.getElementById('playerCard').classList.add('show'); }
+function hidePlayer()  { document.getElementById('playerCard').classList.remove('show'); }
+function showError(m)  { const b = document.getElementById('errorBox'); b.textContent = m; b.classList.add('show'); }
+function hideError()   { document.getElementById('errorBox').classList.remove('show'); }
+
+// ─────────────────────────────────────────
+// Boot
+// ─────────────────────────────────────────
+(async () => {
+  const params = new URLSearchParams(window.location.search);
+  const code   = params.get('code');
+  const error  = params.get('error');
+
+  if (error) {
+    window.history.replaceState({}, '', window.location.pathname);
+    document.getElementById('loginScreen').style.display = 'block';
+    return;
+  }
+
+  if (code) {
+    try {
+      await exchangeCode(code);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  if (isLoggedIn()) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appScreen').style.display = 'block';
+    loadProfile();
+  } else {
+    document.getElementById('loginScreen').style.display = 'block';
+    document.getElementById('appScreen').style.display = 'none';
+  }
+})();
+
+document.getElementById('playlistInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') loadTrack();
+});
+</script>
+
+</body>
+</html>
